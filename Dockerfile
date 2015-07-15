@@ -25,4 +25,5 @@ RUN ls -l /docker-entrypoint.sh
 ENV PATH /usr/lib/postgresql/$PG_MAJOR/bin:$PATH
 ENV PGDATA /var/lib/postgresql/data
 EXPOSE 5432
+USER postgres
 CMD ["postgres"]

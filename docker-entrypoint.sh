@@ -1,14 +1,20 @@
 #!/bin/bash
 
 : ${POSTGRES_DB:=$POSTGRES_USER}
+pass=
+authMethod=trust
+initdb
 
-su postgres -c '/usr/lib/postgresql/9.4/bin/initdb'
-su postgres -c '/usr/lib/postgresql/9.4/bin/pg_ctl start -w -D ${PGDATA} -o "-p 5433"'
-su postgres -c '/usr/lib/postgresql/9.4/bin/createuser -p 5433 dragon'
-su postgres -c '/usr/lib/postgresql/9.4/bin/createdb -p 5433 dragon -E UTF8'
-su postgres -c '/usr/lib/postgresql/9.4/bin/psql -p 5433 -d dragon -c "create extension if not exists postgis;"'
-su postgres -c '/usr/lib/postgresql/9.4/bin/psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"'
+sed -ri "s/^#(listen_addresses\s*=\s*)\S+/\1'*'/" "$PGDATA"/postgresql.conf
+pg_ctl start -w -D ${PGDATA} -o "-p 5433"
+createuser -p 5433 dragon
+createdb -p 5433 dragon -E UTF8
+psql -p 5433 -d dragon -c "create extension if not exists postgis;"
+psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"
 
-su postgres -c '/usr/lib/postgresql/9.4/bin/pg_ctl -w  stop'
+echo
+		
+		{ echo; echo "host all all 0.0.0.0/0 $authMethod"; } >> "$PGDATA"/pg_hba.conf
+pg_ctl -w  stop
 echo "$@"
-su postgres -c 'exec "$@"'
+exec "$@"
