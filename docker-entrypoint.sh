@@ -1,11 +1,14 @@
 #!/bin/bash
 
-${POSTGRES_DB:=$POSTGRES_USER}
+: ${POSTGRES_DB:=$POSTGRES_USER}
 
-gosu postgres pg_ctl start -w -D ${PGDATA} -0 "-p 5433"
-gosu postgres createuser ${POSTGRES_USER}
-gosu postgres createdb ${POSTGRES_DB} -s -E UTF8
-gosu postgres psql -d ${POSTGRES_DB} -c "create extension if not exists postgis;"
-gosu postgres psql -d ${POSTGRES_DB} -c "create extension if not exists postgis_topology;"
+su postgres -c '/usr/lib/postgresql/9.4/bin/initdb'
+su postgres -c '/usr/lib/postgresql/9.4/bin/pg_ctl start -w -D ${PGDATA} -o "-p 5433"'
+su postgres -c '/usr/lib/postgresql/9.4/bin/createuser -p 5433 dragon'
+su postgres -c '/usr/lib/postgresql/9.4/bin/createdb -p 5433 dragon -E UTF8'
+su postgres -c '/usr/lib/postgresql/9.4/bin/psql -p 5433 -d dragon -c "create extension if not exists postgis;"'
+su postgres -c '/usr/lib/postgresql/9.4/bin/psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"'
 
-pg_ctl -w  restart
+su postgres -c '/usr/lib/postgresql/9.4/bin/pg_ctl -w  stop'
+echo "$@"
+su postgres -c 'exec "$@"'
