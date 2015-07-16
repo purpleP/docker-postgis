@@ -40,10 +40,10 @@ if [ "$1" = 'postgres' ]; then
 			pg_ctl start -w -D ${PGDATA} -o "-p 5433"
 			createuser -p 5433 ${POSTGRES_USER}
 			createdb -p 5433 ${POSTGRES_USER} -E UTF8
-			sql = 'alter user "$POSTGRES_USER" with SUPERUSER PASSWORD "$pass";'
+			#sql = 'alter user "$POSTGRES_USER" with SUPERUSER "$pass";'
 			psql -p 5433 -d dragon -c "create extension if not exists postgis;"
 			psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"
-			psql -p 5433 -d dragon -c ${sql}
+			psql -p 5433 -d dragon -c 'alter user "$POSTGRES_USER" with SUPERUSER "$pass";'
 			pg_ctl stop
 			{ echo; echo "host all all 0.0.0.0/0 $authMethod"; } >> "$PGDATA"/pg_hba.conf
 		fi
