@@ -60,6 +60,12 @@ if [ "$1" = 'postgres' ]; then
 			gosu postgres pg_ctl stop
 		fi
 		echo "Extension created"
+
+		set_listen_addresses '*'
+
+		echo
+		echo 'PostgreSQL init process complete; ready for start up.'
+		echo
 	fi
 
 	exec gosu postgres "$@"
