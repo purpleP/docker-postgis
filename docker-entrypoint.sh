@@ -1,15 +1,21 @@
 #!/bin/bash
 set -e
 
+set_listen_addresses() {
+	sedEscapedValue="$(echo "$1" | sed 's/[\/&]/\\&/g')"
+	sed -ri "s/^#?(listen_addresses\s*=\s*)\S+/\1'$sedEscapedValue'/" "$PGDATA/postgresql.conf"
+}
+
 if [ "$1" = 'postgres' ]; then
+	mkdir -p "$PGDATA"
 	chown -R postgres "$PGDATA"
-	
+
 	chmod g+s /run/postgresql
-	chown -R postgres:postgres /run/postgresql
+	chown -R postgres /run/postgresql
 
 	if [ -z "$(ls -A "$PGDATA")" ]; then
-		initdb
-		sed -ri "s/^#(listen_addresses\s*=\s*)\S+/\1'*'/" "$PGDATA"/postgresql.conf
+		gosu postgres initdb
+
 		if [ "$POSTGRES_PASSWORD" ]; then
 			pass="PASSWORD '$POSTGRES_PASSWORD'"
 			authMethod=md5
@@ -32,13 +38,15 @@ if [ "$1" = 'postgres' ]; then
 			pass=
 			authMethod=trust
 		fi
+
+		{ echo; echo "host all all 0.0.0.0/0 $authMethod"; } >> "$PGDATA"/pg_hba.conf
 	
 		: ${POSTGRES_USER:=postgres}
 		: ${POSTGRES_DB:=$POSTGRES_USER}
 
 		if [ "$POSTGRES_DB" != 'postgres' ]; then
-			pg_ctl start -w -D ${PGDATA} -o "-p 5433"
-			createdb -p 5433 ${POSTGRES_DB} -E UTF8
+			gosu postgres pg_ctl start -w -D ${PGDATA} -o "-p 5433"
+			gosu postgres createdb -p 5433 ${POSTGRES_DB} -E UTF8
 			if [ "$POSTGRES_USER" = 'postgres' ]; then
 				op='ALTER'
 			else
@@ -46,13 +54,15 @@ if [ "$1" = 'postgres' ]; then
 			fi
 			sql="$op USER $POSTGRES_USER WITH SUPERUSER $pass;"
 			echo sql is $sql
-			psql -p 5433 -d dragon -c "create extension if not exists postgis;"
-			psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"
-			psql -p 5433 -d dragon -c "$sql"
-			pg_ctl stop
-			{ echo; echo "host all all 0.0.0.0/0 $authMethod"; } >> "$PGDATA"/pg_hba.conf
+			gosu postgres psql -p 5433 -d dragon -c "create extension if not exists postgis;"
+			gosu postgres psql -p 5433 -d dragon -c "create extension if not exists postgis_topology;"
+			gosu postgres psql -p 5433 -d dragon -c "$sql"
+			gosu postgres pg_ctl stop
 		fi
+		echo "Extension created"
 	fi
+
+	exec gosu postgres "$@"
 
 
 
